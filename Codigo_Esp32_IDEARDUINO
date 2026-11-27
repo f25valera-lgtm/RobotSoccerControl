@@ -1,0 +1,76 @@
+#include "BluetoothSerial.h"
+
+// Verificar si el Bluetooth está disponible
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Run make menuconfig to and compile it
+#endif
+
+BluetoothSerial SerialBT;
+
+// Definición de Pines para el Puente H (Ej. L298N)
+// Motor Izquierdo
+const int pinENA = 23;
+const int pinIN1 = 22;
+const int pinIN2 = 21;
+
+// Motor Derecho
+const int pinIN3 = 19;
+const int pinIN4 = 18;
+const int pinENB = 5;
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Inicializar Bluetooth con el nombre del robot (cada equipo puede cambiarlo)
+  SerialBT.begin("RobotSoccer_DUAL"); 
+  Serial.println("El dispositivo Bluetooth está listo. ¡Conéctate!");
+
+  // Configurar pines como salida
+  pinMode(pinENA, OUTPUT);
+  pinMode(pinENB, OUTPUT);
+  pinMode(pinIN1, OUTPUT);
+  pinMode(pinIN2, OUTPUT);
+  pinMode(pinIN3, OUTPUT);
+  pinMode(pinIN4, OUTPUT);
+}
+
+void loop() {
+  if (SerialBT.available()) {
+    char comando = SerialBT.read();
+    Serial.print("Comando recibido: ");
+    Serial.println(comando);
+
+    // Control básico por caracteres (F: Adelante, B: Atrás, L: Izquierda, R: Derecha, S: Stop)
+    switch (comando) {
+      case 'a': // Adelante
+        moverMotores(200, HIGH, LOW, 200, HIGH, LOW);
+        break;
+      case 'e': // Atrás
+        moverMotores(200, LOW, HIGH, 200, LOW, HIGH);
+        break;
+      case 'b': // Giro a la Izquierda (Giro sobre su propio eje)
+        moverMotores(200, LOW, HIGH, 200, HIGH, LOW);
+        break;
+      case 'd': // Giro a la Derecha
+        moverMotores(200, HIGH, LOW, 200, LOW, HIGH);
+        break;
+      case 'c': // Detener
+      default:
+        moverMotores(0, LOW, LOW, 0, LOW, LOW);
+        break;
+    }
+  }
+}
+
+// Función auxiliar para simplificar el movimiento de los motores
+void moverMotores(int velIzq, int dir1_izq, int dir2_izq, int velDer, int dir1_der, int dir2_der) {
+  // Motor Izquierdo (invertido)
+  analogWrite(pinENA, velIzq);
+  digitalWrite(pinIN1, dir2_izq);  // antes dir1_izq
+  digitalWrite(pinIN2, dir1_izq);  // antes dir2_izq
+
+  // Motor Derecho
+  analogWrite(pinENB, velDer);
+  digitalWrite(pinIN3, dir1_der);
+  digitalWrite(pinIN4, dir2_der);
+}
